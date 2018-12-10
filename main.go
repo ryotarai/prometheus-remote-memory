@@ -15,6 +15,7 @@ import (
 func main() {
 	listen := flag.String("listen", ":8080", "Address to listen on")
 	pprof := flag.String("pprof", "", "To enable pprof, pass address to listen such as 'localhost:6060'")
+	expirationDurationStr := flag.String("expiration-duration", "10m", "Duration to expire samples")
 	flag.Parse()
 
 	if *pprof != "" {
@@ -24,7 +25,12 @@ func main() {
 		}()
 	}
 
-	s, err := NewServer()
+	expirationDuration, err := time.ParseDuration(*expirationDurationStr)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	s, err := NewServer(expirationDuration)
 	if err != nil {
 		log.Fatal(err)
 	}

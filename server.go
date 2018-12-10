@@ -21,16 +21,18 @@ const nameLabelKey = "__name__"
 type Server struct {
 	totalWriteRequests      uint64
 	processingWriteRequests int64
+	expirationDuration      time.Duration
 
 	samples    sync.Map
 	timestamps sync.Map
 	cleanMutex sync.RWMutex
 }
 
-func NewServer() (*Server, error) {
+func NewServer(expirationDuration time.Duration) (*Server, error) {
 	s := &Server{
 		totalWriteRequests:      0,
 		processingWriteRequests: 0,
+		expirationDuration:      expirationDuration,
 
 		samples:    sync.Map{},
 		timestamps: sync.Map{},
@@ -146,7 +148,8 @@ func (s *Server) startCleaner() {
 		for {
 			<-ticker.C
 			log.Printf("Cleaning samples...")
-			err := s.clean()
+			expirationTime := time.Now().Add(s.expirationDuration * -1)
+			err := s.cleanBefore(expirationTime)
 			if err != nil {
 				log.Printf("Cleaning samples failed: %s", err)
 			}
@@ -155,9 +158,7 @@ func (s *Server) startCleaner() {
 	}()
 }
 
-func (s *Server) clean() error {
-	expirationTime := time.Now().Add(time.Minute * 5).UnixNano() // TODO: make configurable
-
+func (s *Server) cleanBefore(expirationTime time.Time) error {
 	totalCount := 0
 	cleanedCount := 0
 	s.samples.Range(func(k, v interface{}) bool {
@@ -171,7 +172,7 @@ func (s *Server) clean() error {
 		}
 
 		totalCount++
-		if sample.Timestamp < expirationTime {
+		if sample.Timestamp < expirationTime.UnixNano() {
 			s.cleanMutex.Lock()
 			v, ok := s.samples.Load(name)
 			if ok {
@@ -179,7 +180,7 @@ func (s *Server) clean() error {
 				if !ok {
 					panic("type assertion failed")
 				}
-				if sample.Timestamp < expirationTime { // check again in lock
+				if sample.Timestamp < expirationTime.UnixNano() { // check again in lock
 					s.samples.Delete(name)
 					cleanedCount++
 				}
