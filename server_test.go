@@ -10,7 +10,7 @@ import (
 )
 
 func TestClean(t *testing.T) {
-	server, err := NewServer()
+	server, err := NewServer(time.Minute)
 	assert.NoError(t, err)
 
 	ts1 := time.Unix(1, 0)

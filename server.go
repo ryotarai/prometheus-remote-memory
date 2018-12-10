@@ -24,7 +24,6 @@ type Server struct {
 	expirationDuration      time.Duration
 
 	samples    sync.Map
-	timestamps sync.Map
 	cleanMutex sync.RWMutex
 }
 
@@ -35,7 +34,6 @@ func NewServer(expirationDuration time.Duration) (*Server, error) {
 		expirationDuration:      expirationDuration,
 
 		samples:    sync.Map{},
-		timestamps: sync.Map{},
 		cleanMutex: sync.RWMutex{},
 	}
 	s.startCleaner()
@@ -159,6 +157,7 @@ func (s *Server) startCleaner() {
 }
 
 func (s *Server) cleanBefore(expirationTime time.Time) error {
+	expirationTimeMs := expirationTime.UnixNano() / 1000 / 1000
 	totalCount := 0
 	cleanedCount := 0
 	s.samples.Range(func(k, v interface{}) bool {
@@ -172,7 +171,7 @@ func (s *Server) cleanBefore(expirationTime time.Time) error {
 		}
 
 		totalCount++
-		if sample.Timestamp < expirationTime.UnixNano() {
+		if sample.Timestamp < expirationTimeMs {
 			s.cleanMutex.Lock()
 			v, ok := s.samples.Load(name)
 			if ok {
@@ -180,7 +179,7 @@ func (s *Server) cleanBefore(expirationTime time.Time) error {
 				if !ok {
 					panic("type assertion failed")
 				}
-				if sample.Timestamp < expirationTime.UnixNano() { // check again in lock
+				if sample.Timestamp < expirationTimeMs { // check again in lock
 					s.samples.Delete(name)
 					cleanedCount++
 				}
