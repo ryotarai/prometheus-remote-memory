@@ -158,6 +158,8 @@ func (s *Server) startCleaner() {
 
 func (s *Server) cleanBefore(expirationTime time.Time) error {
 	expirationTimeMs := expirationTime.UnixNano() / 1000 / 1000
+	var maxDeletedTimestamp int64
+	var minDeletedTimestamp int64
 	totalCount := 0
 	cleanedCount := 0
 	s.samples.Range(func(k, v interface{}) bool {
@@ -180,6 +182,13 @@ func (s *Server) cleanBefore(expirationTime time.Time) error {
 					panic("type assertion failed")
 				}
 				if sample.Timestamp < expirationTimeMs { // check again in lock
+					if maxDeletedTimestamp == 0 || maxDeletedTimestamp < sample.Timestamp {
+						maxDeletedTimestamp = sample.Timestamp
+					}
+					if minDeletedTimestamp == 0 || minDeletedTimestamp > sample.Timestamp {
+						minDeletedTimestamp = sample.Timestamp
+					}
+
 					s.samples.Delete(name)
 					cleanedCount++
 				}
@@ -189,7 +198,7 @@ func (s *Server) cleanBefore(expirationTime time.Time) error {
 
 		return true // keep iteration
 	})
-	log.Printf("Cleaned %d of %d samples", cleanedCount, totalCount)
+	log.Printf("Cleaned %d of %d samples (expirationTimeMs: %d, minDeletedTimestamp: %d, maxDeletedTimestamp: %d)", cleanedCount, totalCount, expirationTimeMs, minDeletedTimestamp, maxDeletedTimestamp)
 
 	return nil
 }
