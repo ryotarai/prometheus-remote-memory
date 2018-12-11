@@ -128,7 +128,11 @@ func (s *Server) writeTimeseries(tss []*prompb.TimeSeries) error {
 			if l.Name == nameLabelKey {
 				continue
 			}
-			labelSlice[i] = fmt.Sprintf("%s=\"%s\"", l.Name, l.Value)
+			value := l.Value
+			value = strings.Replace(value, "\\", "\\\\", -1)
+			value = strings.Replace(value, "\"", "\\\"", -1)
+			value = strings.Replace(value, "\n", "\\n", -1)
+			labelSlice[i] = fmt.Sprintf("%s=\"%s\"", l.Name, value)
 		}
 		labelsStr := strings.Join(labelSlice, ",")
 
