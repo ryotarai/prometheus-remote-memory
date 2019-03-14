@@ -57,7 +57,11 @@ func (s *Server) handleSamples(w http.ResponseWriter, r *http.Request) {
 			panic("type assertion failed")
 		}
 
-		fmt.Fprintf(w, "%s %g %d\n", name, sample.Value, sample.Timestamp)
+		if r.URL.Query().Get("excludeTimestamp") != "" {
+			fmt.Fprintf(w, "%s %g\n", name, sample.Value)
+		} else {
+			fmt.Fprintf(w, "%s %g %d\n", name, sample.Value, sample.Timestamp)
+		}
 		return true
 	})
 }
