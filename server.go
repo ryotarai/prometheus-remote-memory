@@ -57,7 +57,7 @@ func (s *Server) handleSamples(w http.ResponseWriter, r *http.Request) {
 			panic("type assertion failed")
 		}
 
-		fmt.Fprintf(w, "%s %f %d\n", name, sample.Value, sample.Timestamp)
+		fmt.Fprintf(w, "%s %g %d\n", name, sample.Value, sample.Timestamp)
 		return true
 	})
 }
