@@ -47,6 +47,17 @@ func (s *Server) handleMetrics(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleSamples(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	excludeTimestamp := query.Get("excludeTimestamp") != ""
+
+	renderLine := func(name string, sample *prompb.Sample) string {
+		if excludeTimestamp {
+			return fmt.Sprintf("%s %g\n", name, sample.Value)
+		}
+		return fmt.Sprintf("%s %g %d\n", name, sample.Value, sample.Timestamp)
+	}
+
+	lines := []string{}
 	s.samples.Range(func(k, v interface{}) bool {
 		name, ok := k.(string)
 		if !ok {
@@ -57,13 +68,15 @@ func (s *Server) handleSamples(w http.ResponseWriter, r *http.Request) {
 			panic("type assertion failed")
 		}
 
-		if r.URL.Query().Get("excludeTimestamp") != "" {
-			fmt.Fprintf(w, "%s %g\n", name, sample.Value)
-		} else {
-			fmt.Fprintf(w, "%s %g %d\n", name, sample.Value, sample.Timestamp)
-		}
+		lines = append(lines, renderLine(name, sample))
+
 		return true
 	})
+
+	sort.Strings(lines)
+	for _, line := range lines {
+		fmt.Fprint(w, line)
+	}
 }
 
 func (s *Server) handleWrite(w http.ResponseWriter, r *http.Request) {
