@@ -2,6 +2,29 @@
 
 
 [[projects]]
+  digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
+  name = "github.com/davecgh/go-spew"
+  packages = ["spew"]
+  pruneopts = "UT"
+  revision = "8991bc29aa16c548c550c7ff78260e27b9ab7c73"
+  version = "v1.1.1"
+
+[[projects]]
+  digest = "1:68355419a4217ff45b6e3b2a7db22f8a8d75ffd5f0d456edcf6148d55e78c4b2"
+  name = "github.com/emirpasic/gods"
+  packages = [
+    "containers",
+    "maps",
+    "maps/treemap",
+    "trees",
+    "trees/redblacktree",
+    "utils",
+  ]
+  pruneopts = "UT"
+  revision = "1615341f118ae12f353cc8a983f35b584342c9b3"
+  version = "v1.12.0"
+
+[[projects]]
   digest = "1:3c6f119217e08a2696cb578238439bebfb462007f3636282d1a68fa0568eb583"
   name = "github.com/gogo/protobuf"
   packages = [
@@ -49,12 +72,28 @@
   revision = "e4b8a938efae14de11fd97311e873e989896348c"
 
 [[projects]]
+  digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
+  name = "github.com/pmezard/go-difflib"
+  packages = ["difflib"]
+  pruneopts = "UT"
+  revision = "792786c7400a136282c1664665ae0a8db921c6c2"
+  version = "v1.0.0"
+
+[[projects]]
   digest = "1:f0a8dba015e66a640397d54a80cee86dd4ee5fc0b7479aa724065404415e2a1e"
   name = "github.com/prometheus/prometheus"
   packages = ["prompb"]
   pruneopts = "UT"
   revision = "167a4b4e73a8eca8df648d2d2043e21bdb9a7449"
   version = "v2.4.3"
+
+[[projects]]
+  digest = "1:972c2427413d41a1e06ca4897e8528e5a1622894050e2f527b38ddf0f343f759"
+  name = "github.com/stretchr/testify"
+  packages = ["assert"]
+  pruneopts = "UT"
+  revision = "ffdc059bfe9ce6a4e144ba849dbedead332c6053"
+  version = "v1.3.0"
 
 [[projects]]
   digest = "1:279284b3cc1429d8ea79402792b17c5dbfadd583ec4963db69f0368762f89be4"
@@ -151,9 +190,11 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/emirpasic/gods/maps/treemap",
     "github.com/golang/protobuf/proto",
     "github.com/golang/snappy",
     "github.com/prometheus/prometheus/prompb",
+    "github.com/stretchr/testify/assert",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

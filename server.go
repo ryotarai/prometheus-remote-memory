@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/emirpasic/gods/maps/treemap"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/snappy"
 	"github.com/prometheus/prometheus/prompb"
@@ -23,8 +24,8 @@ type Server struct {
 	processingWriteRequests int64
 	expirationDuration      time.Duration
 
-	samples    sync.Map
-	cleanMutex sync.RWMutex
+	samples    *treemap.Map
+	cleanMutex sync.Mutex
 }
 
 func NewServer(expirationDuration time.Duration) (*Server, error) {
@@ -33,8 +34,8 @@ func NewServer(expirationDuration time.Duration) (*Server, error) {
 		processingWriteRequests: 0,
 		expirationDuration:      expirationDuration,
 
-		samples:    sync.Map{},
-		cleanMutex: sync.RWMutex{},
+		samples:    treemap.NewWithStringComparator(),
+		cleanMutex: sync.Mutex{},
 	}
 	s.startCleaner()
 
@@ -57,8 +58,7 @@ func (s *Server) handleSamples(w http.ResponseWriter, r *http.Request) {
 		return fmt.Sprintf("%s %g %d\n", name, sample.Value, sample.Timestamp)
 	}
 
-	lines := []string{}
-	s.samples.Range(func(k, v interface{}) bool {
+	s.samples.Each(func(k, v interface{}) {
 		name, ok := k.(string)
 		if !ok {
 			panic("type assertion failed")
@@ -68,15 +68,9 @@ func (s *Server) handleSamples(w http.ResponseWriter, r *http.Request) {
 			panic("type assertion failed")
 		}
 
-		lines = append(lines, renderLine(name, sample))
-
-		return true
-	})
-
-	sort.Strings(lines)
-	for _, line := range lines {
+		line := renderLine(name, sample)
 		fmt.Fprint(w, line)
-	}
+	})
 }
 
 func (s *Server) handleWrite(w http.ResponseWriter, r *http.Request) {
@@ -153,9 +147,9 @@ func (s *Server) writeTimeseries(tss []*prompb.TimeSeries) error {
 		}
 		labelsStr := strings.Join(labelSlice, ",")
 
-		s.cleanMutex.RLock()
-		s.samples.Store(fmt.Sprintf("%s{%s}", name, labelsStr), sample)
-		s.cleanMutex.RUnlock()
+		s.cleanMutex.Lock()
+		s.samples.Put(fmt.Sprintf("%s{%s}", name, labelsStr), sample)
+		s.cleanMutex.Unlock()
 	}
 
 	return nil
@@ -183,7 +177,7 @@ func (s *Server) cleanBefore(expirationTime time.Time) error {
 	var minDeletedTimestamp int64
 	totalCount := 0
 	cleanedCount := 0
-	s.samples.Range(func(k, v interface{}) bool {
+	s.samples.Each(func(k, v interface{}) {
 		name, ok := k.(string)
 		if !ok {
 			panic("type assertion failed")
@@ -196,7 +190,7 @@ func (s *Server) cleanBefore(expirationTime time.Time) error {
 		totalCount++
 		if sample.Timestamp < expirationTimeMs {
 			s.cleanMutex.Lock()
-			v, ok := s.samples.Load(name)
+			v, ok := s.samples.Get(name)
 			if ok {
 				sample, ok := v.(*prompb.Sample)
 				if !ok {
@@ -210,14 +204,12 @@ func (s *Server) cleanBefore(expirationTime time.Time) error {
 						minDeletedTimestamp = sample.Timestamp
 					}
 
-					s.samples.Delete(name)
+					s.samples.Remove(name)
 					cleanedCount++
 				}
 			}
 			s.cleanMutex.Unlock()
 		}
-
-		return true // keep iteration
 	})
 	log.Printf("Cleaned %d of %d samples (expirationTimeMs: %d, minDeletedTimestamp: %d, maxDeletedTimestamp: %d)", cleanedCount, totalCount, expirationTimeMs, minDeletedTimestamp, maxDeletedTimestamp)
 
